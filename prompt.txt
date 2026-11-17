@@ -60,7 +60,7 @@ Working defaults for this run
 
 Repository
 ----------
-- Push the tooling to https://github.com/ivarcodes/clipperMax.git.
+- Push the tooling to https://github.com/ivarcodes/clipItGang.git.
 - Keep media and run junk out of git: clips/, reference/, transcriptions/,
   samples/, .venv/, clips.json, logs, __pycache__.
 - Track only the tooling, docs, fonts and this prompt.txt.
