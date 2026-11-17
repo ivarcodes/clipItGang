@@ -2,61 +2,89 @@ Shorts-maker run requirements (from user)
 =========================================
 Video: reference/AMA [s-OS25VjRSs].mkv (2h 21m, 1920x1080 60fps, Opus stereo).
 
+Goal
+----
+ONE flagship, story-driven vertical video, under 1:30 (target ~89s):
+1. Intro: the user introduces the Charizard box and the cards.
+2. Unboxing: all five packs, in order, with the best pulls.
+3. Payoff: the last-pack hit, the value reaction, and the two favourite cards.
+
+Not ten separate shorts. Pick the best moments, cut dead air, and merge them
+into one narrative. Keep the spoken words verbatim in captions (including
+mispronunciations and slang); never "fix" names.
+
 Project layout
 --------------
-reference/       the source video
-samples/         demo/test files (demo.wav + demo transcript)
-clips/           rendered shorts from the reference video
-transcriptions/  transcript.txt (readable) + transcript.json (word timestamps)
-clips.json       the clip list I write before rendering
-
-Rights: only the user's own content / content they have permission to reuse.
+reference/       the source video (ignored by git)
+clips/           rendered video (ignored by git)
+shorts-maker/    tooling, docs, fonts
+.venv/           Python environment
+prompt.txt       this brief
+transcriptions/  temporary word-level transcript (removed by final cleanup)
+clips.json       temporary render spec (removed by final cleanup)
 
 Hard requirements
 -----------------
-1. Do NOT use 100% of the laptop's resources. The user is streaming while this
-   runs. Keep CPU load low, run jobs sequentially, no parallel renders, no GPU
-   assumptions.
-2. Every clip must be UNDER 1 minute (hard cap 59s).
-3. Do NOT pick random moments. Extract the ENTIRE transcript first, read/analyse
-   all of it, then pick the best and most exciting moments from it.
-4. Must work with any LLM / any API provider. No vendor lock-in, no API keys or
-   provider-specific code needed for clip selection.
-5. Do not overcomplicate the workflow. Keep it simple.
+1. Do NOT use 100% of the laptop's resources. The user may be streaming. Keep
+   CPU load low, run jobs sequentially, no parallel renders, no GPU assumptions.
+2. The final story video must be UNDER 1:30. Keep the full 14-beat storyboard
+   you liked: a 3s cold-open hook + box/card intro + all five packs + payoff.
+   After removing only real dead air it is ~74s; pass --max-duration 89.
+3. Extract the entire transcript first, read it, then pick the story beats from
+   the whole unboxing, not from random samples.
+4. Full-screen 9:16 crop, no blurred bars. Set crop_x per segment to keep the
+   hands/cards in frame.
+5. Captions must be perfectly aligned, legible and verbatim. Use the phrase-aware
+   Archivo Black style (112 px, 9 px outline, 5 px shadow, 3 px spacing, bottom
+   baseline y=1620, white inactive words, warm yellow active word, pop-in/fade).
+6. The speaker must be speaking through the WHOLE video: remove only genuine
+   dead air (gaps >= 0.5s) with strip_silence.py. Do NOT chop short fragments
+   or drop whole beats -- keep every visual moment from the original cut.
+7. Transitions: subtle J-cuts and L-cuts (--jl-lead 0.12), not dissolves.
+   Alternate jcut/lcut at beat changes; internal trims are hard cuts.
+8. Only use the user's own content / content they have permission to reuse.
+9. Must work with any LLM / any API provider. No vendor lock-in, no API keys.
 
 OBS rule (IMPORTANT)
 --------------------
 - NEVER close, stop, restart, kill or signal OBS. Detect it read-only via /proc.
-- The scripts auto-detect OBS themselves; no manual checking needed.
+- The scripts auto-detect OBS; no manual checking needed.
 - OBS running  -> 2 cores, nice 19, ionice idle (stream gets priority).
 - OBS off      -> up to 6 cores, nice 19, ionice best-effort.
 - Never use 100% of the machine.
-- Memory: transcribe in 10-minute chunks with MemoryMax=2.2G. The full-file
-  small run peaked at 3.4G and systemd-oomd killed it (and the server). Never
-  run a full-file model without a memory cap.
+- Transcribe in 10-minute chunks with MemoryMax=2.2G. Never run a full-file
+  model without a memory cap.
 
-Working defaults for this run
------------------------------
-- Whisper: small model, int8, --threads auto (OBS-aware).
-- FFmpeg: --threads auto (OBS-aware), one clip at a time, preset medium, crf 18.
-- Reframe: full-screen 9:16 crop (no blurred bars), crop_x set per clip.
-- Captions: bold, heavy Anton font, white words with the spoken word in yellow.
-- Rendering prints a live progress bar (percent, elapsed, ETA) in the terminal.
-- Show the user the shortlist (title + timestamps + reason) before rendering
-  if there is any doubt; otherwise render and report.
+Rendering defaults for this run
+-------------------------------
+- FFmpeg: --threads auto (OBS-aware), one render at a time, `--lowmem` (one
+  short-lived process per segment) so OBS/VS Code are never OOM-killed.
+- Reframe: crop, 1080x1920, 60fps at crf 16, AAC 192k (YouTube upload quality).
+- Captions: Archivo Black, 3 words / 16 chars per card, phrase breaks,
+  2-line balanced wraps, exact transcript text.
+- Silence: re-read the full transcript, then run
+  strip_silence.py clips.json --transcript ... --out clips_silent.json
+  --min-gap 0.5 --min-part 0.6. Removes ~17s of dead air, keeps 28 parts.
+- Transitions: subtle J-cut / L-cut, --jl-lead 0.12, alternating at beat
+  boundaries; no dissolves. Audio is a seamless concat.
+- Final command: render_clips.py clips_silent.json --transcript ... --out clips
+  --reframe crop --caption-style bold --max-words 3 --max-duration 89
+  --jl-lead 0.12 --lowmem --fps 60 --preset fast --crf 16 --threads auto
+- Verify duration, resolution, fps, audio, silencedetect, crops and caption sync
+  across all beats before reporting.
 
-10 more unboxing clips (current task)
--------------------------------------
-- Make 10 MORE clips, all from the Pokemon card opening / unboxing section.
-- Each clip strictly under 60s; the renderer hard-caps at 59s.
-- Cutting dead/useless parts is allowed, and mashing several moments into one
-  clip is allowed (multi-segment clips).
-- Queue the 10 best parts and render them ONE AT A TIME, never in parallel.
-- Full-screen 9:16 crop, no blur bars. Bold Anton captions, white words with
-  the spoken word in yellow.
-- When all clips are rendered and checked, run FINAL cleanup so the project is
-  left with only clips/ and reference/ (plus the tooling and .venv):
-  delete transcriptions/, samples/, clips.json, logs and all temp files.
+Story beats (this run)
+----------------------
+0. Cold-open hook: "This is the one I wanted" / Snorlax full art (4246-4249)
+1. Charizard box intro / "brings the darkness" hook
+2. Charizard EX promo close-up / "my first Charizard card"
+3. Five-pack lineup: 2 Journey Together, 2 Surging Sparks (Scarlet/Violet)
+4. Pack 1: first pack magic / full-art "that's a sir"
+5. Pack 2: Pikachu manifest / trainer card
+6. Packs 3 + 4: Journey Together, "nothing big"
+7. Last pack: Snorlax full art / "I manifested that shit"
+8. Value: PSA 10 vs BGS $2,250 / "more than my paycheck"
+9. Finale: "these two are my highlights of the day"
 
 Repository
 ----------
@@ -64,5 +92,13 @@ Repository
 - Keep media and run junk out of git: clips/, reference/, transcriptions/,
   samples/, .venv/, clips.json, logs, __pycache__.
 - Track only the tooling, docs, fonts and this prompt.txt.
-- The Anton font is SIL Open Font License 1.1; keep assets/fonts/OFL.txt next
-  to the font.
+- Archivo Black is SIL Open Font License 1.1; keep assets/fonts/OFL-ArchivoBlack.txt
+  (and the older Anton OFL) next to the fonts.
+- GitHub auth is stored permanently at ~/.config/clipper/git-credentials (mode 600).
+
+Final cleanup
+-------------
+When the video is checked, run `scripts/cleanup.py --final --dry-run` then
+`scripts/cleanup.py --final`. Leave only clips/, reference/, shorts-maker/,
+.venv/ and prompt.txt; delete transcriptions/, clips.json, test specs, logs and
+temp artifacts.

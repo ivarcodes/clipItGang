@@ -54,7 +54,7 @@ Keep the machine usable: `--threads auto` is the default and auto-detects OBS. W
 
 Read `transcript.txt` (in chunks if it is long) and pick moments that match the user's prompt. If the prompt is vague, default to the most engaging, self-contained moments. Good Shorts clips:
 
-- **20-59 seconds** (hard max 59 so it qualifies as a Short; 25-45 is the sweet spot)
+- **20-59 seconds** for a standalone short (25-45 is the sweet spot). For one story-driven video, use 8-15 segments and 75-90 seconds, then pass `--max-duration 92`
 - **Open on a hook**: a bold claim, a question, a surprising statement, or the start of a story. Skip clips that begin with "so, um, anyway" or depend on earlier context ("like I said before").
 - **Stand alone**: a viewer with zero context should understand it.
 - **Have a payoff**: end right after the punchline, answer or conclusion, not mid-thought.
@@ -90,13 +90,37 @@ To cut dead air or mash several moments into one clip, use `segments` instead of
   "title": "More Than My Paycheck",
   "crop_x": 0.0,
   "segments": [
-    {"start": 4441.0, "end": 4471.2, "crop_x": 0.0},
-    {"start": 4473.8, "end": 4497.5, "crop_x": 0.0}
+    {"start": 4441.0, "end": 4452.4, "crop_x": 0.4, "transition": "fade"},
+    {"start": 4473.8, "end": 4497.5, "crop_x": 0.0, "transition": "slideleft"}
   ]
 }
 ```
 
-The renderer trims and concatenates the segments in one FFmpeg pass, shifts captions onto the combined timeline, and enforces the 59s cap across all segments.
+The renderer trims and joins the segments in one FFmpeg pass, shifts captions onto the finished timeline, and enforces the `--max-duration` cap across all segments. A segment's `transition` controls the boundary that follows it:
+
+- `jcut`: the next beat's sound starts before its picture (audio leads)
+- `lcut`: the previous beat's sound continues after the picture changes (audio lags)
+- `cut`: a plain hard cut; legacy `fade`/`slideleft`/... are also supported with `--transition-duration`
+
+J/L cuts keep the audio as one seamless track while the video shifts ±`--jl-lead` seconds (default 0.22) across each boundary. Captions follow the audio, restart on every segment, and the final word is clamped to the cut instead of being dropped.
+
+#### Story cuts
+
+When the user wants one video that tells a story (an unboxing, a trip, a build), don't render separate shorts:
+
+- 8-15 segments, 75-90 seconds total.
+- Arc: hook -> introduce the subject -> hit every major beat -> payoff -> closing line.
+- Use J/L cuts at beat changes (alternate `jcut` and `lcut`); dissolve transitions usually feel softer than a short's pace.
+- If the speaker must be audible the whole time, run the silence pre-pass first; it removes every dead gap inside the beats:
+  ```bash
+  python3 scripts/strip_silence.py clips.json --transcript shorts_work/transcript.json \
+      --out clips_silent.json --min-gap 0.5 --min-part 0.6
+  ```
+  Use a 0.5s gap threshold so real pauses between words survive and only dead
+  air is removed. Then render `clips_silent.json`. Verify with
+  `ffmpeg -i out.mp4 -af silencedetect=noise=-33dB:d=0.13 -f null -`.
+- Pass `--max-duration 92`, then check the last caption and the total duration before reporting.
+- Keep captions verbatim, including slang and mispronunciations. Do not "fix" names.
 
 Show the user a short list of the chosen clips (title, timestamps, one-line reason) before rendering when there are many, or if they asked to review. For a simple "just make them" request, go straight on to rendering.
 
@@ -110,9 +134,11 @@ Options:
 - `--reframe crop` (default): fills the whole 9:16 frame by cropping the sides, no blur bars. Use `crop_x` per clip to aim at the speaker (0.5 = centre).
 - `--reframe blur`: full video centred on a blurred, zoomed copy of itself. Safe for any footage, never cuts off people, but shows bars.
 - `--no-captions` to skip burned-in captions
-- `--caption-style bold|clean` (default `bold`: heavy Anton font, white words with the spoken word in yellow)
-- `--max-words 3` words per caption line
-- `--max-duration 59` hard cap in seconds (default; keeps every clip under 1 minute)
+- `--caption-style bold|clean` (default `bold`: Archivo Black phrase cards, white words with the spoken word in warm yellow, pop-in/fade)
+- `--max-words 3` max words per caption card; cards also break at 16 characters and punctuation, and long cards wrap onto two balanced lines
+- `--max-duration 59` hard cap in seconds; use `92` for a ~90s story video
+- `--jl-lead 0.22` seconds a J/L cut leads or lags the picture; use segment transitions `jcut`/`lcut` for audio-first / picture-first cuts
+- `--transition-duration 0.12` legacy crossfade length between segments (0 = hard cuts); `--transition fade|slideleft|smoothleft|...` sets the default xfade style
 - `--threads auto` detects OBS per clip (2 cores while streaming, up to 6 when off; never touches OBS)
 - `--crf 20` quality (lower = better/larger), `--preset medium`
 - `--only N` render just queue item N (1-based), handy for resuming a queue one clip at a time

@@ -41,6 +41,8 @@ FINAL_TARGETS = [
     "transcriptions",
     "samples",
     "clips.json",
+    "clips_silent.json",
+    "clips_test.json",
     "shorts_work",
     "nohup.out",
 ]

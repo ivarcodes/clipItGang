@@ -6,6 +6,8 @@ samples/
 
 # Local run files
 clips.json
+clips_silent.json
+clips_test.json
 shorts_work/
 *.log
 *.pid
