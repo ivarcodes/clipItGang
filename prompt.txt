@@ -27,9 +27,9 @@ Hard requirements
 -----------------
 1. Do NOT use 100% of the laptop's resources. The user may be streaming. Keep
    CPU load low, run jobs sequentially, no parallel renders, no GPU assumptions.
-2. The final story video must be UNDER 1:30. Keep the full 14-beat storyboard
-   you liked: a 3s cold-open hook + box/card intro + all five packs + payoff.
-   After removing only real dead air it is ~74s; pass --max-duration 89.
+2. The final story video must be UNDER 1:30. The user reverted to the ORIGINAL
+   89s cut: 14-beat storyboard, all visual moments intact, no silence stripping,
+   no hook. Target 89.2s; pass --max-duration 92.
 3. Extract the entire transcript first, read it, then pick the story beats from
    the whole unboxing, not from random samples.
 4. Full-screen 9:16 crop, no blurred bars. Set crop_x per segment to keep the
@@ -37,11 +37,10 @@ Hard requirements
 5. Captions must be perfectly aligned, legible and verbatim. Use the phrase-aware
    Archivo Black style (112 px, 9 px outline, 5 px shadow, 3 px spacing, bottom
    baseline y=1620, white inactive words, warm yellow active word, pop-in/fade).
-6. The speaker must be speaking through the WHOLE video: remove only genuine
-   dead air (gaps >= 0.5s) with strip_silence.py. Do NOT chop short fragments
-   or drop whole beats -- keep every visual moment from the original cut.
-7. Transitions: subtle J-cuts and L-cuts (--jl-lead 0.12), not dissolves.
-   Alternate jcut/lcut at beat changes; internal trims are hard cuts.
+6. Keep the original pacing and every visual moment. Do NOT run strip_silence.py
+   and do NOT add a hook -- the user preferred the original 89s pacing.
+7. Transitions: the original 0.12s xfade/acrossfade (fade + slideleft) at beat
+   changes. No J/L cuts in the final deliverable.
 8. Only use the user's own content / content they have permission to reuse.
 9. Must work with any LLM / any API provider. No vendor lock-in, no API keys.
 
@@ -62,20 +61,16 @@ Rendering defaults for this run
 - Reframe: crop, 1080x1920, 60fps at crf 16, AAC 192k (YouTube upload quality).
 - Captions: Archivo Black, 3 words / 16 chars per card, phrase breaks,
   2-line balanced wraps, exact transcript text.
-- Silence: re-read the full transcript, then run
-  strip_silence.py clips.json --transcript ... --out clips_silent.json
-  --min-gap 0.5 --min-part 0.6. Removes ~17s of dead air, keeps 28 parts.
-- Transitions: subtle J-cut / L-cut, --jl-lead 0.12, alternating at beat
-  boundaries; no dissolves. Audio is a seamless concat.
-- Final command: render_clips.py clips_silent.json --transcript ... --out clips
-  --reframe crop --caption-style bold --max-words 3 --max-duration 89
-  --jl-lead 0.12 --lowmem --fps 60 --preset fast --crf 16 --threads auto
+- Silence: none removed in the final cut (original pacing preserved).
+- Transitions: 0.12s xfade/acrossfade, fade + slideleft (no J/L).
+- Final command: render_clips.py clips.json --transcript ... --out clips
+  --reframe crop --caption-style bold --max-words 3 --max-duration 92
+  --transition-duration 0.12 --threads auto --preset fast --crf 19
 - Verify duration, resolution, fps, audio, silencedetect, crops and caption sync
   across all beats before reporting.
 
 Story beats (this run)
 ----------------------
-0. Cold-open hook: "This is the one I wanted" / Snorlax full art (4246-4249)
 1. Charizard box intro / "brings the darkness" hook
 2. Charizard EX promo close-up / "my first Charizard card"
 3. Five-pack lineup: 2 Journey Together, 2 Surging Sparks (Scarlet/Violet)
