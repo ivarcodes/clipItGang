@@ -1,0 +1,24 @@
+# Rendered media and source footage (large binaries)
+clips/
+reference/
+transcriptions/
+samples/
+
+# Local run files
+clips.json
+shorts_work/
+*.log
+*.pid
+nohup.out
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Packaged skill bundle (rebuild from shorts-maker/)
+*.skill
+
+# OS / editor
+.DS_Store
+*.swp

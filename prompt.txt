@@ -1,0 +1,68 @@
+Shorts-maker run requirements (from user)
+=========================================
+Video: reference/AMA [s-OS25VjRSs].mkv (2h 21m, 1920x1080 60fps, Opus stereo).
+
+Project layout
+--------------
+reference/       the source video
+samples/         demo/test files (demo.wav + demo transcript)
+clips/           rendered shorts from the reference video
+transcriptions/  transcript.txt (readable) + transcript.json (word timestamps)
+clips.json       the clip list I write before rendering
+
+Rights: only the user's own content / content they have permission to reuse.
+
+Hard requirements
+-----------------
+1. Do NOT use 100% of the laptop's resources. The user is streaming while this
+   runs. Keep CPU load low, run jobs sequentially, no parallel renders, no GPU
+   assumptions.
+2. Every clip must be UNDER 1 minute (hard cap 59s).
+3. Do NOT pick random moments. Extract the ENTIRE transcript first, read/analyse
+   all of it, then pick the best and most exciting moments from it.
+4. Must work with any LLM / any API provider. No vendor lock-in, no API keys or
+   provider-specific code needed for clip selection.
+5. Do not overcomplicate the workflow. Keep it simple.
+
+OBS rule (IMPORTANT)
+--------------------
+- NEVER close, stop, restart, kill or signal OBS. Detect it read-only via /proc.
+- The scripts auto-detect OBS themselves; no manual checking needed.
+- OBS running  -> 2 cores, nice 19, ionice idle (stream gets priority).
+- OBS off      -> up to 6 cores, nice 19, ionice best-effort.
+- Never use 100% of the machine.
+- Memory: transcribe in 10-minute chunks with MemoryMax=2.2G. The full-file
+  small run peaked at 3.4G and systemd-oomd killed it (and the server). Never
+  run a full-file model without a memory cap.
+
+Working defaults for this run
+-----------------------------
+- Whisper: small model, int8, --threads auto (OBS-aware).
+- FFmpeg: --threads auto (OBS-aware), one clip at a time, preset medium, crf 18.
+- Reframe: full-screen 9:16 crop (no blurred bars), crop_x set per clip.
+- Captions: bold, heavy Anton font, white words with the spoken word in yellow.
+- Rendering prints a live progress bar (percent, elapsed, ETA) in the terminal.
+- Show the user the shortlist (title + timestamps + reason) before rendering
+  if there is any doubt; otherwise render and report.
+
+10 more unboxing clips (current task)
+-------------------------------------
+- Make 10 MORE clips, all from the Pokemon card opening / unboxing section.
+- Each clip strictly under 60s; the renderer hard-caps at 59s.
+- Cutting dead/useless parts is allowed, and mashing several moments into one
+  clip is allowed (multi-segment clips).
+- Queue the 10 best parts and render them ONE AT A TIME, never in parallel.
+- Full-screen 9:16 crop, no blur bars. Bold Anton captions, white words with
+  the spoken word in yellow.
+- When all clips are rendered and checked, run FINAL cleanup so the project is
+  left with only clips/ and reference/ (plus the tooling and .venv):
+  delete transcriptions/, samples/, clips.json, logs and all temp files.
+
+Repository
+----------
+- Push the tooling to https://github.com/ivarcodes/clipperMax.git.
+- Keep media and run junk out of git: clips/, reference/, transcriptions/,
+  samples/, .venv/, clips.json, logs, __pycache__.
+- Track only the tooling, docs, fonts and this prompt.txt.
+- The Anton font is SIL Open Font License 1.1; keep assets/fonts/OFL.txt next
+  to the font.
